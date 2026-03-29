@@ -12,6 +12,17 @@
 using namespace std;
 
 const int ORDER[COLUMNS] = { 3, 2, 4, 1, 5, 0, 6 }; // Checks middle first
+
+const int POSITION_WEIGHTS[ROWS][COLUMNS] = 
+{
+	{3, 4,  5,  7,  5, 4, 3},
+	{4, 6,  8, 10,  8, 6, 4},
+	{5, 8, 11, 13, 11, 8, 5},
+	{5, 8, 11, 13, 11, 8, 5},
+	{4, 6,  8, 10,  8, 6, 4},
+	{3, 4,  5,  7,  5, 4, 3}
+};
+
 int board[ROWS][COLUMNS]{};
 
 const void printBoard()
@@ -33,7 +44,7 @@ const void printBoard()
 	cout << endl;
 }
 
-int getNextFreeSpace(int c)
+const int getNextFreeSpace(int c)
 {
 	for (int i = ROWS - 1; i >= 0; --i)
 		if (board[i][c] == EMPTY)
@@ -75,78 +86,77 @@ const bool isValid(int c)
 	return board[0][c] == EMPTY;
 }
 
-vector<int> getValidMoves()
+const vector<int> getValidMoves()
 {
 	vector<int> moves;
 	for (int i = 0; i < COLUMNS; ++i)
 	{
 		int col = ORDER[i];
-		if (isValid(i))
-			moves.push_back(i);
+		if (isValid(col))
+			moves.push_back(col);
 	}
 	return moves;
 }
 
 // EVALUATION
-int evaluateWindow(vector<int> window)
+const int evaluateWindow(int c1, int c2, int c3, int c4)
 {
-	int score = 0, comp = 0, player = 0, empty = 0;
+	int comp = 0, player = 0, empty = 0;
 
-	for (int loc : window)
+	for (int v : { c1, c2, c3, c4 })
 	{
-		if (loc == COMP) comp++;
-		else if (loc == PLAYER) player++;
+		if (v == COMP) comp++;
+		else if (v == PLAYER) player++;
 		else empty++;
 	}
 
-	if (comp == 4) score += 1000000;
-	else if (comp == 3 && empty == 1) score += 100;
-	else if (comp == 2 && empty == 2) score += 10;
+	if (comp > 0 && player > 0) return 0;
 
-	if (player == 4) score -= 1000000;
-	else if (player == 3 && empty == 1) score -= 70;
-	else if (player == 2 && empty == 2) score -= 40;
-
-	return score;
+	if (comp == 3 && empty == 1) return 900;
+	if (comp == 2 && empty == 2) return 50;
+	if (player == 3 && empty == 1) return -800;
+	if (player == 2 && empty == 2) return -45;
+	return 0;
 }
 
-int evaluate()
+const int evaluate()
 {
 	int score = 0;	
 
-	int center = COLUMNS / 2;
-	int count = 0;
 	for (int i = 0; i < ROWS; ++i)
-		if (board[i][center] == COMP)
-			count++;
-	score += 50 * count;
+	{
+		for (int j = 0; j < COLUMNS; ++j)
+		{
+			if (board[i][j] == COMP) score += POSITION_WEIGHTS[i][j];
+			else if (board[i][j] == PLAYER) score -= POSITION_WEIGHTS[i][j];
+		}
+	}
 	
 	for (int i = 0; i < ROWS; ++i)
 		for (int j = 0; j < COLUMNS - 3; ++j)
-			score += evaluateWindow({ board[i][j], board[i][j + 1], board[i][j + 2], board[i][j + 3] });
+			score += evaluateWindow(board[i][j], board[i][j + 1], board[i][j + 2], board[i][j + 3]);
 
 	for (int j = 0; j < COLUMNS; ++j)
 		for (int i = 0; i < ROWS - 3; ++i)
-			score += evaluateWindow({ board[i][j], board[i + 1][j], board[i + 2][j], board[i + 3][j] });
+			score += evaluateWindow(board[i][j], board[i + 1][j], board[i + 2][j], board[i + 3][j]);
 
 	for (int i = 0; i < ROWS - 3; ++i)
 		for (int j = 0; j < COLUMNS - 3; ++j)
-			score += evaluateWindow({ board[i][j], board[i + 1][j + 1], board[i + 2][j + 2], board[i + 3][j + 3] });
+			score += evaluateWindow(board[i][j], board[i + 1][j + 1], board[i + 2][j + 2], board[i + 3][j + 3]);
 
 	for (int i = 3; i < ROWS; ++i)
 		for (int j = 0; j < COLUMNS - 3; ++j)
-			score += evaluateWindow({ board[i][j], board[i - 1][j + 1], board[i - 2][j + 2], board[i - 3][j + 3] });
+			score += evaluateWindow(board[i][j], board[i - 1][j + 1], board[i - 2][j + 2], board[i - 3][j + 3]);
 	return score;
 }
-//
+// ------------
 
-int minimax(int depth, int alpha, int beta, bool isMax)
+const int minimax(int depth, int alpha, int beta, bool isMax)
 {
-	if (isWinningMove(COMP)) return INT_MAX;
-	if (isWinningMove(PLAYER)) return INT_MIN;
 	if (depth == 0) return evaluate();
 		
 	vector<int> moves = getValidMoves();
+	if (moves.empty()) return 0; // DRAW
 
 	if (isMax)
 	{
@@ -155,7 +165,7 @@ int minimax(int depth, int alpha, int beta, bool isMax)
 		{
 			int row = getNextFreeSpace(col);
 			board[row][col] = COMP;
-			int v = isWinningMove(COMP) ? INT_MAX : minimax(depth - 1, alpha, beta, false);
+			int v = isWinningMove(COMP) ? (INT_MAX - (10 - depth)) : minimax(depth - 1, alpha, beta, false);
 			board[row][col] = EMPTY;
 
 			maxScore = max(maxScore, v);
@@ -173,7 +183,7 @@ int minimax(int depth, int alpha, int beta, bool isMax)
 		{
 			int row = getNextFreeSpace(col);
 			board[row][col] = PLAYER;
-			int v = isWinningMove(PLAYER) ? INT_MIN : minimax(depth - 1, alpha, beta, true);
+			int v = isWinningMove(PLAYER) ? (INT_MIN + (10 - depth)) : minimax(depth - 1, alpha, beta, true);
 			board[row][col] = EMPTY;
 
 			minScore = min(minScore, v);
@@ -186,15 +196,15 @@ int minimax(int depth, int alpha, int beta, bool isMax)
 	}
 }
 
-int getBestMove(int depth)
+const int getBestMove(int depth)
 {
 	int maxScore = INT_MIN;
-	int bestMove = 0;
+	int bestMove = getValidMoves()[0];
 	for (int col : getValidMoves())
 	{
 		int row = getNextFreeSpace(col);
 		board[row][col] = COMP;
-		int score = minimax(depth - 1, INT_MIN, INT_MAX, false);
+		int score = isWinningMove(COMP) ? INT_MAX : minimax(depth - 1, INT_MIN, INT_MAX, false);
 		board[row][col] = EMPTY;
 		if (score > maxScore)
 		{
@@ -233,7 +243,7 @@ int main()
 		}
 
 		// COMPUTER MOVE
-		col = getBestMove(5);
+		col = getBestMove(7);
 		row = getNextFreeSpace(col);
 		board[row][col] = COMP;
 		if (isWinningMove(COMP))
