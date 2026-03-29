@@ -11,9 +11,10 @@
 
 using namespace std;
 
+const int ORDER[COLUMNS] = { 3, 2, 4, 1, 5, 0, 6 }; // Checks middle first
 int board[ROWS][COLUMNS]{};
 
-void printBoard()
+const void printBoard()
 {
 	system("cls");
 	for (int i = 0; i < ROWS; ++i)
@@ -22,16 +23,14 @@ void printBoard()
 			cout << board[i][j] << " ";
 		cout << endl;
 	}
-}
 
-void playMove(int r, int c, int p)
-{
-	board[r][c] = p;
-}
+	for (int i = 0; i < COLUMNS; ++i)
+		cout << "- ";
+	cout << endl;
 
-void undo(int r, int c) // FASTER
-{
-	board[r][c] = EMPTY;
+	for (int i = 0; i < COLUMNS; ++i)
+		cout << i << " ";
+	cout << endl;
 }
 
 int getNextFreeSpace(int c)
@@ -44,55 +43,29 @@ int getNextFreeSpace(int c)
 
 const bool isWinningMove(int p)
 {
+	// Checking horizontal
 	for (int i = 0; i < ROWS; ++i)
-	{
 		for (int j = 0; j < COLUMNS - 3; ++j)
-		{
-			if (board[i][j] == p &&
-				board[i][j + 1] == p &&
-				board[i][j + 2] == p &&
-				board[i][j + 3] == p)
+			if (board[i][j] == p && board[i][j + 1] == p && board[i][j + 2] == p && board[i][j + 3] == p)
 				return true;
-		}
-	}
 
+	// Checking vertical
 	for (int j = 0; j < COLUMNS; ++j)
-	{
 		for (int i = 0; i < ROWS - 3; ++i)
-		{
-			if (board[i][j] == p &&
-				board[i + 1][j] == p &&
-				board[i + 2][j] == p &&
-				board[i + 3][j] == p)
+			if (board[i][j] == p && board[i + 1][j] == p && board[i + 2][j] == p && board[i + 3][j] == p)
 				return true;
-		}
-	}
 
 	// Checking the right diagonal
 	for (int i = 0; i < ROWS - 3; ++i)
-	{
 		for (int j = 0; j < COLUMNS - 3; ++j)
-		{
-			if (board[i][j] == p &&
-				board[i + 1][j + 1] == p &&
-				board[i + 2][j + 2] == p &&
-				board[i + 3][j + 3] == p)
+			if (board[i][j] == p && board[i + 1][j + 1] == p && board[i + 2][j + 2] == p && board[i + 3][j + 3] == p)
 				return true;
-		}
-	}
 
 	// Checking the left diagonal
 	for (int i = 3; i < ROWS; ++i)
-	{
 		for (int j = 0; j < COLUMNS - 3; ++j)
-		{
-			if (board[i][j] == p &&
-				board[i - 1][j + 1] == p &&
-				board[i - 2][j + 2] == p &&
-				board[i - 3][j + 3] == p)
+			if (board[i][j] == p && board[i - 1][j + 1] == p && board[i - 2][j + 2] == p && board[i - 3][j + 3] == p)
 				return true;
-		}
-	}
 
 	return false;
 }
@@ -106,41 +79,33 @@ vector<int> getValidMoves()
 {
 	vector<int> moves;
 	for (int i = 0; i < COLUMNS; ++i)
+	{
+		int col = ORDER[i];
 		if (isValid(i))
 			moves.push_back(i);
+	}
 	return moves;
 }
 
 // EVALUATION
 int evaluateWindow(vector<int> window)
 {
-	int score = 0;
-	int comp, player, empty;
-	comp = player = empty = 0;
+	int score = 0, comp = 0, player = 0, empty = 0;
 
 	for (int loc : window)
 	{
-		if (loc == COMP) 
-			comp++;
-		else if (loc == PLAYER)
-			player++;
-		else 
-			empty++;
+		if (loc == COMP) comp++;
+		else if (loc == PLAYER) player++;
+		else empty++;
 	}
 
-	if (comp == 4)
-		score += 1000000;
-	else if (comp == 3 && empty == 1)
-		score += 100;
-	else if (comp == 2 && empty == 2)
-		score += 10;
+	if (comp == 4) score += 1000000;
+	else if (comp == 3 && empty == 1) score += 100;
+	else if (comp == 2 && empty == 2) score += 10;
 
-	if (player == 4)
-		score -= 1000000;
-	else if (player == 3 && empty == 1)
-		score -= 70;
-	else if (player == 2 && empty == 2)
-		score -= 50;
+	if (player == 4) score -= 1000000;
+	else if (player == 3 && empty == 1) score -= 70;
+	else if (player == 2 && empty == 2) score -= 40;
 
 	return score;
 }
@@ -177,13 +142,10 @@ int evaluate()
 
 int minimax(int depth, int alpha, int beta, bool isMax)
 {
-	if (isWinningMove(COMP))
-		return INT_MAX;
-	if (isWinningMove(PLAYER))
-		return INT_MIN;
-	if (depth == 0)
-		return evaluate();
-
+	if (isWinningMove(COMP)) return INT_MAX;
+	if (isWinningMove(PLAYER)) return INT_MIN;
+	if (depth == 0) return evaluate();
+		
 	vector<int> moves = getValidMoves();
 
 	if (isMax)
@@ -192,13 +154,9 @@ int minimax(int depth, int alpha, int beta, bool isMax)
 		for (int col : moves)
 		{
 			int row = getNextFreeSpace(col);
-			playMove(row, col, COMP);
-			int v;
-			if (isWinningMove(COMP))
-				v = INT_MAX;
-			else
-				v = minimax(depth - 1, alpha, beta, false);
-			undo(row, col);
+			board[row][col] = COMP;
+			int v = isWinningMove(COMP) ? INT_MAX : minimax(depth - 1, alpha, beta, false);
+			board[row][col] = EMPTY;
 
 			maxScore = max(maxScore, v);
 			alpha = max(alpha, v);
@@ -214,13 +172,9 @@ int minimax(int depth, int alpha, int beta, bool isMax)
 		for (int col : moves)
 		{
 			int row = getNextFreeSpace(col);
-			playMove(row, col, PLAYER);
-			int v;
-			if (isWinningMove(PLAYER))
-				v = INT_MIN;
-			else
-				v = minimax(depth - 1, alpha, beta, true);
-			undo(row, col);
+			board[row][col] = PLAYER;
+			int v = isWinningMove(PLAYER) ? INT_MIN : minimax(depth - 1, alpha, beta, true);
+			board[row][col] = EMPTY;
 
 			minScore = min(minScore, v);
 			beta = min(beta, v);
@@ -239,9 +193,9 @@ int getBestMove(int depth)
 	for (int col : getValidMoves())
 	{
 		int row = getNextFreeSpace(col);
-		playMove(row, col, COMP);
+		board[row][col] = COMP;
 		int score = minimax(depth - 1, INT_MIN, INT_MAX, false);
-		undo(row, col);
+		board[row][col] = EMPTY;
 		if (score > maxScore)
 		{
 			maxScore = score;
@@ -261,15 +215,16 @@ int main()
 		int col;
 		do
 		{
+			cout << "Enter your move: ";
 			cin >> col;
 			if (col < 0 || col > 6 || !isValid(col))
 			{
 				printBoard();
-				cout << "Move is invalid. Enter again:" << endl;
+				cout << "That move is invalid." << endl;
 			}
 		} while (col < 0 || col > 6 || !isValid(col));
 		int row = getNextFreeSpace(col);
-		playMove(row, col, PLAYER);
+		board[row][col] = PLAYER;
 		if (isWinningMove(PLAYER))
 		{
 			printBoard();
@@ -280,11 +235,26 @@ int main()
 		// COMPUTER MOVE
 		col = getBestMove(5);
 		row = getNextFreeSpace(col);
-		playMove(row, col, COMP);
+		board[row][col] = COMP;
 		if (isWinningMove(COMP))
 		{
 			printBoard();
 			cout << "You lost" << endl;
+			break;
+		}
+
+		// CHECK IF DRAW
+		bool draw = true;
+		for (int i = 0; i < COLUMNS; ++i)
+			if (isValid(i))
+			{
+				draw = false;
+				break;
+			}
+		if (draw)
+		{
+			printBoard();
+			cout << "Draw" << endl;
 			break;
 		}
 	}
