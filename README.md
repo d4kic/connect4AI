@@ -7,3 +7,8 @@ Console-based implementation of Connect 4 game written in C++, with an AI oppone
 - Iterative deepening to progressively search deeper moves
 - Uses heuristic evaluation function and positional weights to evaluate current state of the board
 - Move ordering for efficiency
+## Possible future improvements
+- Better evaluation function
+- Adding transposition table
+- Parallelisation
+- GUI
