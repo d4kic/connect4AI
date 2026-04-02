@@ -11,4 +11,4 @@ Console-based implementation of Connect 4 game written in C++, with an AI oppone
 - Better evaluation function
 - Adding transposition table
 - Parallelisation
-- GUI
+- GUI Enchancements

@@ -1,6 +1,9 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <SFML/Graphics.hpp>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -22,31 +25,8 @@ const int POSITION_WEIGHTS[ROWS][COLUMNS] =
 	{3, 4,  5,  7,  5, 4, 3}
 };
 
-int board[ROWS][COLUMNS]{};
+int board[ROWS][COLUMNS] = { 0 };
 int moveCount = 0;
-
-void printBoard()
-{
-	cout << "\033[2J\033[H";
-	for (int i = 0; i < ROWS; ++i)
-	{
-		for (int j = 0; j < COLUMNS; ++j)
-		{
-			if (board[i][j] == PLAYER) cout << "X ";
-			else if (board[i][j] == COMP) cout << "O ";
-			else cout << ". ";
-		}
-		cout << endl;
-	}
-
-	for (int i = 0; i < COLUMNS; ++i)
-		cout << "- ";
-	cout << endl;
-
-	for (int i = 0; i < COLUMNS; ++i)
-		cout << i + 1 << " ";
-	cout << endl;
-}
 
 int getNextFreeSpace(int c)
 {
@@ -249,57 +229,74 @@ int getBestMove(int maxDepth)
 
 int main()
 {
-	while (true)
+	bool gameOver = false;
+	const int CELL = 100;
+	sf::RenderWindow window(sf::VideoMode({ COLUMNS * CELL, ROWS * CELL }), "Connect 4");
+
+	while (window.isOpen())
 	{
-		printBoard();
-
-		// PLAYER MOVE
-		int col;
-		do
+		while (optional event = window.pollEvent())
 		{
-			cout << "Enter your move: ";
-			if (!(cin >> col))
+			if (event->is<sf::Event::Closed>())
+				window.close();
+
+			if (!gameOver)
 			{
-				cin.clear();
-				cin.ignore(numeric_limits<streamsize>::max(), '\n');
-				col = 0;
+				// Get the mouse click
+				if (const sf::Event::MouseButtonPressed* mouse = event->getIf<sf::Event::MouseButtonPressed>())
+				{
+					int col = mouse->position.x / CELL;
+
+					if (col >= 0 && col < COLUMNS && isValid(col))
+					{
+						// PLAYER MOVE
+						int row = getNextFreeSpace(col);
+						board[row][col] = PLAYER;
+						moveCount++;
+
+						if (isWinningMove(PLAYER))
+						{
+							cout << "Victory" << endl;
+							gameOver = true;
+						}
+						else
+						{
+							// COMPUTER MOVE
+							col = getBestMove(7);
+							row = getNextFreeSpace(col);
+							board[row][col] = COMP;
+							moveCount++;
+
+							if (isWinningMove(COMP))
+							{
+								cout << "You lost" << endl;
+								gameOver = true;
+							}
+						}
+					}
+				}
 			}
-			--col;
-			if (col < 0 || col > 6 || !isValid(col))
+		}
+
+		// Drawing board
+		window.clear(sf::Color::Black);
+
+		for (int i = 0; i < ROWS; ++i)
+		{
+			for (int j = 0; j < COLUMNS; ++j)
 			{
-				printBoard();
-				cout << "That move is invalid." << endl;
+				sf::CircleShape circle(40);
+				circle.setPosition({ j * CELL + 5.f, i * CELL + 5.f });
+
+				if (board[i][j] == PLAYER) circle.setFillColor(sf::Color::Magenta);
+				else if (board[i][j] == COMP) circle.setFillColor(sf::Color::Yellow);
+				else circle.setFillColor(sf::Color::White);
+
+				window.draw(circle);
 			}
-		} while (col < 0 || col > 6 || !isValid(col));
-		int row = getNextFreeSpace(col);
-		board[row][col] = PLAYER;
-		moveCount++;
-		if (isWinningMove(PLAYER))
-		{
-			printBoard();
-			cout << "Victory" << endl;
-			break;
 		}
 
-		// COMPUTER MOVE
-		col = getBestMove(7);
-		row = getNextFreeSpace(col);
-		board[row][col] = COMP;
-		moveCount++;
-		if (isWinningMove(COMP))
-		{
-			printBoard();
-			cout << "You lost" << endl;
-			break;
-		}
-
-		// CHECK IF DRAW
-		if (moveCount == ROWS * COLUMNS)
-		{
-			printBoard();
-			cout << "Draw" << endl;
-			break;
-		}
+		window.display();
 	}
 	return 0;
 }
