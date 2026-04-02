@@ -14,3 +14,4 @@ To play run ./connect4/x64/Debug/connect4.exe
 - Adding transposition table
 - Parallelisation
 - GUI Enchancements
+- Bitboard representation of the board
