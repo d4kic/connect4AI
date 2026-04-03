@@ -2,8 +2,6 @@
 #include <limits>
 #include <vector>
 #include <SFML/Graphics.hpp>
-#include <thread>
-#include <chrono>
 
 using namespace std;
 
